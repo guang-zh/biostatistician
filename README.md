@@ -1,6 +1,9 @@
 # biostatistician
 Notes for the different analysis in biostatistics
 
+# Summary tables Resources
+https://www.danieldsjoberg.com/gtsummary/articles/tbl_summary.html
+
 # Stacked Barplot
 ```
 library(ggplot2)
