@@ -3,7 +3,9 @@ Notes for the different analysis in biostatistics
 
 ## Update packages in R
 installed_packages <- installed.packages()
+
 installed_packages <- installed_packages[, c("Package", "Version")]
+
 write.csv(installed_packages, "directory_to_location/installed_packages.csv", row.names = FALSE)
 
 ### Read the list of installed packages
