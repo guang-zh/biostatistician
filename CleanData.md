@@ -45,8 +45,7 @@ library(ROCR)
 library(dataMeta)
 library(labelled)
 library(plyr)
-## R aborted session Issue resolved
-# install.packages("xfun", type = "binary")
+install.packages("xfun", type = "binary") #R aborted session Issue resolved
 library(xfun)
 library(corrplot)
 library('randomForest')
