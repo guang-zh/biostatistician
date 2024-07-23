@@ -1,5 +1,6 @@
 
 # Load libraries
+```
 library(knitr)
 library(data.table)
 library(tidyverse)
@@ -50,12 +51,14 @@ library(xfun)
 library(corrplot)
 library('randomForest')
 library(janitor)
-
+```
 
 # Set working directory
+```
 setwd("c:/Users/Desktop/Biostatistician/")
 DIR_PATH <- "c:/Users/Desktop/Biostatistician/"
 load("Data/RData/df_data.Rda")
+```
 
 # Label column
 label(df_data$var_name) <- "Variable Name"
