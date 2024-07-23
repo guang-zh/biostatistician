@@ -32,3 +32,13 @@ ggplot(df_data, aes(x=reorder(therapy, order), y=valuePercent, fill=variable)) +
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), 
         legend.position = "top")
 ```
+
+# Correlogram in R
+```
+library(corrplot)
+# Baseline
+baseline_cor <- cor(df_data %>% select(Baseline_magnitude:Baseline_count), use = "pairwise.complete.obs")
+corrplot(baseline_cor, method = "ellipse", type = "lower", tl.cex = 0.8)
+```
+
+
