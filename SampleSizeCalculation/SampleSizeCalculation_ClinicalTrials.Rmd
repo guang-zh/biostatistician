@@ -1,0 +1,109 @@
+---
+title: "Sample Size Estimation"
+author: "Guang Zhang"
+date: "`r Sys.Date()`"
+output: 
+  #pdf_document: default
+  html_document: 
+     toc: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r loadLibraries, include=FALSE, message=FALSE, warning = FALSE}
+
+# Load libraries
+library(knitr)
+library(data.table)
+library(tidyverse)
+library(dplyr)
+library(formattable)
+library(gtsummary)
+library(ggpubr)
+library(rstatix)
+library(magrittr)
+library(ggpmisc)
+library(Hmisc)
+library(scales)
+library(ggplot2)
+library(epiR)
+library(accrualPlot)
+library(lubridate)
+library(devtools)
+library(purrr)
+library(vtable)
+library(reshape2)
+library(readxl)
+library(writexl)
+
+
+library(eulerr)
+library(ggrepel)
+library(ggforce)
+library(viridis)
+library(ggsci)
+library(RColorBrewer)
+library(flextable)
+library(Hmisc)
+library(tableone)
+library(readxl)
+
+library(presize)
+library(pROC)
+library(multiarm)
+library(MAMS)
+
+library(MultiPower)
+library(WebPower)
+
+library(pwr)
+library(Superpower)
+library(presize)
+library(pROC)
+
+```
+
+
+```{r AUCbasedSampleSize, include=TRUE, keep_text = TRUE}
+
+# Binary Outcome with AUC score
+
+# Method 1: power analysis AUC 0.8
+
+library(pROC)
+power.roc.test(auc=0.8, sig.level=0.05, power=0.8, kappa=1/2)
+
+# Method 2: precision AUC 0.8
+library(presize)
+prec_auc(auc = 0.8, prev = 1/3, conf.width = 0.1, n = NULL, conf.level = 0.95)
+
+# Adjust pvalues
+p.adjust(0.0001, method = "fdr", n = 500)
+
+```
+
+```{r multiGroupsPowerAnalysis, include=TRUE, keep_text = TRUE}
+
+library(pwr)
+# pwr.anova.test
+
+pwr.anova.test(k = 4, n = NULL, f = 0.1, sig.level = 0.05, power = 0.9)
+pwr.anova.test(k = 4, n = 80, f = NULL, sig.level = 0.05, power = 0.9)
+
+
+############################################################
+library(Superpower)
+power_oneway_ancova(
+  mu = c(8, 7.5, 5.5, 5),
+  n_cov = 1,
+  sd = sqrt(2^2+1.5^2+0.5^2+0.25^2),
+  r2 = 0.02,
+  alpha_level = .05,
+  beta_level = 0.1,
+  round_up = TRUE,
+  type = "approx"
+)
+
+```
