@@ -1,0 +1,111 @@
+---
+title: "Clinical Trials Data Analysis Practice (Cursor AI practice)"
+author: "Guang Zhang"
+date: "`r Sys.Date()`"
+output: 
+  #pdf_document: default
+  html_document: 
+     toc: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r loadLibraries, include=FALSE, message=FALSE, warning = FALSE}
+
+# Load libraries
+library(knitr)
+library(data.table)
+
+library(remotes)
+library(Biostatistics)
+
+# Install and load additional required packages
+if (!require(clinfun)) install.packages("clinfun")
+if (!require(pROC)) install.packages("pROC")
+if (!require(caret)) install.packages("caret")
+if (!require(randomForest)) install.packages("randomForest")
+
+library(clinfun)
+library(pROC)
+library(caret)
+library(randomForest)
+
+```
+
+```{r clinical_trial_design}
+# Set seed for reproducibility
+set.seed(123)
+
+# Simulate a clinical trial dataset for heart failure detection
+n <- 500  # Total number of patients
+control_rate <- 0.1  # Expected event rate in control group
+treatment_effect <- 0.05  # Expected treatment effect
+
+# Calculate sample size using power.prop.test
+sample_size <- power.prop.test(
+  p1 = control_rate,
+  p2 = control_rate + treatment_effect,
+  sig.level = 0.05,
+  power = 0.8
+)
+
+# Print sample size calculation results
+cat("Estimated sample size per group:", ceiling(sample_size$n), "\n")
+cat("Total sample size:", ceiling(sample_size$n) * 2, "\n\n")
+
+# Create simulated dataset
+set.seed(456)
+data <- data.frame(
+  age = rnorm(n, mean = 60, sd = 10),
+  bmi = rnorm(n, mean = 25, sd = 5),
+  blood_pressure = rnorm(n, mean = 130, sd = 20),
+  cholesterol = rnorm(n, mean = 200, sd = 40),
+  treatment = factor(sample(c("Control", "Treatment"), n, replace = TRUE))
+)
+
+# Add heart_failure outcome based on treatment
+data$heart_failure <- factor(rbinom(n, 1, ifelse(data$treatment == "Control", control_rate, control_rate + treatment_effect)))
+
+# Split data into training and testing sets
+set.seed(789)
+train_index <- createDataPartition(data$heart_failure, p = 0.7, list = FALSE)
+train_data <- data[train_index, ]
+test_data <- data[-train_index, ]
+
+# Train logistic regression model
+log_model <- glm(heart_failure ~ age + bmi + blood_pressure + cholesterol + treatment, 
+                 data = train_data, family = binomial())
+
+# Train random forest model
+rf_model <- randomForest(heart_failure ~ age + bmi + blood_pressure + cholesterol + treatment, 
+                         data = train_data)
+
+# Make predictions on test data
+log_pred <- predict(log_model, newdata = test_data, type = "response")
+rf_pred <- predict(rf_model, newdata = test_data, type = "prob")[, 2]
+
+# Calculate accuracy
+log_accuracy <- mean(ifelse(log_pred > 0.5, 1, 0) == as.numeric(test_data$heart_failure) - 1)
+rf_accuracy <- mean(ifelse(rf_pred > 0.5, 1, 0) == as.numeric(test_data$heart_failure) - 1)
+
+# Calculate AUROC
+log_roc <- roc(test_data$heart_failure, log_pred)
+rf_roc <- roc(test_data$heart_failure, rf_pred)
+
+# Print results
+cat("Logistic Regression:\n")
+cat("Accuracy:", round(log_accuracy * 100, 2), "%\n")
+cat("AUROC:", round(auc(log_roc), 3), "\n\n")
+
+cat("Random Forest:\n")
+cat("Accuracy:", round(rf_accuracy * 100, 2), "%\n")
+cat("AUROC:", round(auc(rf_roc), 3), "\n")
+
+# Plot ROC curves
+plot(log_roc, main = "ROC Curves", col = "blue")
+plot(rf_roc, add = TRUE, col = "red")
+legend("bottomright", legend = c("Logistic Regression", "Random Forest"), 
+       col = c("blue", "red"), lwd = 2)
+```
