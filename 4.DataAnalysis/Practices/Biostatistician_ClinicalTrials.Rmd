@@ -66,7 +66,19 @@ data <- data.frame(
 )
 
 # Add heart_failure outcome based on treatment
-data$heart_failure <- factor(rbinom(n, 1, ifelse(data$treatment == "Control", control_rate, control_rate + treatment_effect)))
+data$heart_failure <- factor(
+  rbinom(
+    n = n,
+    size = 1,
+    prob = ifelse(
+      data$treatment == "Control",
+      control_rate,
+      control_rate + treatment_effect
+    )
+  ),
+  levels = c("0", "1"),
+  labels = c("No", "Yes")
+)
 
 # Split data into training and testing sets
 set.seed(789)
