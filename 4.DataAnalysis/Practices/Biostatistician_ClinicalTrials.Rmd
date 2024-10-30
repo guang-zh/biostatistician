@@ -32,6 +32,8 @@ library(pROC)
 library(caret)
 library(randomForest)
 
+library(DescTools)
+
 ```
 
 ```{r clinical_trial_design}
@@ -121,3 +123,65 @@ plot(rf_roc, add = TRUE, col = "red")
 legend("bottomright", legend = c("Logistic Regression", "Random Forest"), 
        col = c("blue", "red"), lwd = 2)
 ```
+
+```{r ccc-analysis, echo=TRUE, warning=FALSE, message=FALSE}
+# Load necessary libraries
+library(effsize)  # For effect size calculations
+library(Hmisc)    # For concordance correlation coefficient
+library(ggplot2)  # For plotting
+
+# Generate a simple dataframe for performing CCC tests
+data <- data.frame(
+  sensor_1 = c(22, 27, 35, 47, 55),
+  sensor_2 = c(21, 33, 42, 59, 68),
+  sensor_3 = c(33, 46, 57, 66, 74),
+  sensor_4 = c(10, 21, 55, 43, 60),
+  sensor_5 = c(89, 41, 23, 45, 66)
+)
+
+
+# Select sensor variables for analysis
+sensor_vars <- data[, grep("sensor_", names(data))]
+
+
+# Assuming sensor_vars is already defined and contains your sensor data
+# Initialize an empty list to store results
+ccc_results <- list()
+
+# Calculate concordance correlation coefficient (CCC) for each pair of sensor variables
+for (i in 1:ncol(sensor_vars)) {
+  for (j in 1:ncol(sensor_vars)) {
+    # Get the names of the variables
+    var1 <- colnames(sensor_vars)[i]
+    var2 <- colnames(sensor_vars)[j]
+    
+    # Calculate CCC
+    ccc_value <- if (i == j) {
+      1  # CCC is 1 for identical variables
+    } else {
+      ccc_result <- DescTools::CCC(sensor_vars[[i]], sensor_vars[[j]])  # Use CCC() from DescTools
+      ccc_result$rho.c$est
+    }
+    
+    # Store the result in the list
+    ccc_results[[length(ccc_results) + 1]] <- data.frame(Var1 = var1, Var2 = var2, CCC = ccc_value)
+  }
+}
+
+# Combine all results into a single data frame
+ccc_df <- dplyr::bind_rows(ccc_results)
+
+# Check the structure of ccc_df
+str(ccc_df)  # This will help you understand the structure of the data frame
+# Plot CCC heatmap with prettier colors and CCC values in the grades
+ggplot(ccc_df, aes(x = Var2, y = Var1, fill = CCC)) + 
+  geom_tile() + 
+  scale_fill_gradientn(colors = c("blue", "white", "red"), values = scales::rescale(c(-1, 0, 1))) + 
+  labs(x = "Sensor Variable 1", y = "Sensor Variable 2", fill = "CCC") + 
+  theme_minimal() + 
+  geom_text(aes(label = round(CCC, 2)), check_overlap = TRUE, size = 3) + 
+  ggtitle("Concordance Correlation Coefficient CCC for Sensors")
+
+
+```{r}
+
