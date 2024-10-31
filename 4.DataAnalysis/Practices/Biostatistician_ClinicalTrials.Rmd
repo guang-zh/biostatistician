@@ -149,8 +149,8 @@ sensor_vars <- data[, grep("sensor_", names(data))]
 ccc_results <- list()
 
 # Calculate concordance correlation coefficient (CCC) for each pair of sensor variables
-for (i in 1:ncol(sensor_vars)) {
-  for (j in 1:ncol(sensor_vars)) {
+for (i in seq_len(ncol(sensor_vars))) { 
+  for (j in seq_len(ncol(sensor_vars))) {
     # Get the names of the variables
     var1 <- colnames(sensor_vars)[i]
     var2 <- colnames(sensor_vars)[j]
@@ -184,5 +184,5 @@ ggplot(ccc_df, aes(x = Var2, y = Var1, fill = CCC)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
-```{r}
+```
 
