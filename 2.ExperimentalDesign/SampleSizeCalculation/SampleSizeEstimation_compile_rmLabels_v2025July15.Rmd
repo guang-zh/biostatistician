@@ -1,0 +1,1474 @@
+---
+title: "Sample Size Estimation"
+author: "Guang Zhang"
+date: "`r Sys.Date()`"
+output: 
+  #pdf_document: default
+  html_document: 
+     toc: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r loadLibraries, include=FALSE, message=FALSE, warning = FALSE}
+
+# Load libraries
+library(knitr)
+library(data.table)
+library(tidyverse)
+library(dplyr)
+library(formattable)
+library(gtsummary)
+library(ggpubr)
+library(rstatix)
+library(magrittr)
+library(ggpmisc)
+library(Hmisc)
+library(scales)
+library(ggplot2)
+library(epiR)
+library(accrualPlot)
+library(lubridate)
+library(devtools)
+library(purrr)
+library(vtable)
+library(reshape2)
+library(readxl)
+library(writexl)
+
+
+library(eulerr)
+library(ggrepel)
+library(ggforce)
+library(viridis)
+library(ggsci)
+library(RColorBrewer)
+library(flextable)
+library(Hmisc)
+library(tableone)
+library(readxl)
+
+library(presize)
+library(pROC)
+library(multiarm)
+library(MAMS)
+
+library(MultiPower)
+library(WebPower)
+
+library(pwr)
+library(Superpower)
+library(presize)
+library(pROC)
+
+library(cluster)
+library(CRTSize)
+library(clusterPower)
+
+
+library(devtools)
+# install_github("https://github.com/douyangyd/CRTpowerdist")
+library(CRTpowerdist)
+
+library(kappaSize)
+
+library(MultiPower)
+library(FDRsampsize)
+library(lpSolve)
+
+# install.packages("keras")
+# library(keras)
+# # Install TensorFlow backend (only once)
+# keras::install_keras()
+
+
+```
+
+
+## Sample Size Estimation: power analysis
+
+Effect size: The effect size in a clinical trial refers to the magnitude of the difference in heart failure outcomes between the treatment group and the control group.
+
+### Effect size = 0.2; control / case ratio = 0.75
+```{r HFtrial1SampleSize, include=TRUE}
+library(stats)
+
+effect_size <- 0.2 
+power <- 0.8 
+alpha <- 0.05 
+prop_control <- 0.2 
+
+sample_size <- power.prop.test(n = NULL, p1 = prop_control, p2 = prop_control + effect_size, power = power, sig.level = alpha, alternative = "two.sided")$n
+
+sample_size
+
+total_size <- ceiling(sample_size)*2
+
+n_case <- total_size/1.75 # 75% ratio for control & case
+n_control <- n_case * 0.75
+
+print(paste0("Heart Failure detection N case: ", ceiling(n_case)))
+print(paste0("Heart Failure detection N control: ", ceiling(n_control)))
+
+
+```
+
+
+### Effect size = 0.2; control / case ratio = 0.75
+Based on 'Diabetes Canada', Prevalence of Diabetes in 2020 is 29%
+```{r Trial2SampleSize, include=TRUE, keep_tex=TRUE}
+
+#########################################################
+# Sample size calculation for a randomized crossover trial on D/Do glucose and canagliflozin vs. placebo
+library(pwr)
+# d = (mean1 - mean2) / s_pooled
+d <- (0.46-0.31)/0.148
+print(d)
+n <- pwr.t.test(n = NULL, d = 1.013514, sig.level = 0.025, power = 0.8, type = "paired")
+print(n)
+
+n <- pwr.t.test(n = NULL, d = 1.013514, sig.level = 0.025, power = 0.8, type = "paired", alternative = "greater")
+print(n)
+
+
+n <- pwr.t.test(n = NULL, d = 1.013514, sig.level = 0.025, power = 0.8, type = "two.sample")
+print(n)
+
+library(presize)
+prec_meandiff(delta = 0.15, sd1 = 0.148, n1 = NULL, conf.width = 0.2, conf.level = 0.975)
+prec_mean(mean= 0.15, sd = 0.148, n = NULL, conf.width = 0.2, conf.level = 0.975)
+
+
+library(WebPower)
+wp.rmanova(ng = 2, nm = 2, f = 0.2, alpha = 0.05, power = 0.8, type = 1) 
+wp.rmanova(ng = 2, nm = 2, f = 0.1976424, alpha = 0.025, power = 0.8, type = 1) 
+
+
+```
+
+
+## Sample Size calculation using the AUROC, prediction model using AUROC values
+Reference:
+Hanley, JA and McNeil, BJ (1982) The Meaning and Use of the Area under a Receiver Operating Characteristic (ROC) Curve. Radiology 148, 29-36
+
+```{r sampleAUROC, echo=FALSE}
+
+library(presize)
+N <- 500
+prev <- .1
+auc <- .65
+(prec <- prec_auc(auc, prev, n = N))
+cwidth <- prec$conf.width
+# sample size
+prec_auc(auc, prev, conf.width = cwidth)
+
+# N <- 500
+prev <- .7
+auc <- .85
+(prec <- prec_auc(auc, prev, n = 100))
+cwidth <- prec$conf.width
+# sample size
+prec_auc(auc, prev, conf.width = cwidth)
+
+prec_auc(auc = 0.85, prev = 0.7, conf.width = 0.2, conf.level = 0.95)
+
+prec_auc(auc = 0.864, prev = 0.25, conf.width = 0.2, conf.level = 0.95)
+
+
+prec_auc(auc = 0.784, prev = 0.5714, conf.width = 0.2, conf.level = 0.95)
+prec_auc(auc = 0.784, prev = 0.5714, conf.width = 0.1, conf.level = 0.95)
+
+prec_auc(auc = 0.784, prev = 0.5714, n=175, conf.level = 0.95)
+prec_auc(auc = 0.784, prev = 0.5714, conf.width = 0.133, conf.level = 0.95)
+prec_auc(auc = 0.762, prev = 0.5714, conf.width = 0.15, conf.level = 0.95)
+
+prec_auc(auc = 0.87, prev = 0.15, conf.width = 0.1, conf.level = 0.95)
+
+prec_auc(auc = 0.87, n=126+96, conf.level = 0.95, prev = 0.57)
+
+
+prevalence_l <- c()
+auc_l <- c()
+n_l <- c()
+n1_l <- c()
+n2_l <- c()
+
+for (i in seq(from = 0.12, to = 0.25, by = 0.01)) {
+  auc_res <- prec_auc(auc = 0.85, prev = i, conf.width = 0.2, conf.level = 0.95)
+  prevalence_l <- append(prevalence_l, i)
+  auc_l <- append(auc_l, auc_res$auc)
+  n_l <- append(n_l, auc_res$n)
+  n1_l <- append(n1_l, auc_res$n1)
+  n2_l <- append(n2_l, auc_res$n2)
+}
+
+# my_list <- list(prevalence_l, auc_l, n_l, n1_l, n2_l)
+# my_df <- as.data.frame(my_list)
+
+df_auc85 <- as.data.frame(cbind(prevalence_l, auc_l, n_l, n1_l, n2_l))
+
+ggplot(df_auc85, aes(x=prevalence_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = n1_l, color="Green")) +
+  geom_line(aes(y = n2_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated - AUC 0.85",
+    values = c("red", "green", "blue"),
+    labels = c("Negative N", "Positive N", "Total N")
+  ) +
+  scale_x_continuous(limits = c(0.12, 0.25), breaks = seq(0.1, 0.26, by = 0.02))+
+  labs(x = "Prevalence (ratio of positive cases / total sample size)", y = "Sample Size N") +
+  theme_classic() -> lineplot_auc85
+
+lineplot_auc85
+
+
+###############################################################
+# Varying AUROC, with prevalence of 0.2
+prevalence_l <- c()
+auc_l <- c()
+n_l <- c()
+n1_l <- c()
+n2_l <- c()
+
+for (i in seq(from = 0.7, to = 0.96, by = 0.02)) {
+  auc_res <- prec_auc(auc = i, prev = 0.2, conf.width = 0.2, conf.level = 0.95)
+  prevalence_l <- append(prevalence_l, auc_res$prev)
+  auc_l <- append(auc_l, auc_res$auc)
+  n_l <- append(n_l, auc_res$n)
+  n1_l <- append(n1_l, auc_res$n1)
+  n2_l <- append(n2_l, auc_res$n2)
+}
+
+# my_list <- list(prevalence_l, auc_l, n_l, n1_l, n2_l)
+# my_df <- as.data.frame(my_list)
+
+df_aucVary <- as.data.frame(cbind(prevalence_l, auc_l, n_l, n1_l, n2_l))
+
+ggplot(df_aucVary, aes(x=auc_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = n1_l, color="Green")) +
+  geom_line(aes(y = n2_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated - Prevalence 0.2",
+    values = c("red", "green", "blue"),
+    labels = c("Negative N", "Positive N", "Total N")
+  ) +
+  scale_x_continuous(limits = c(0.7, 0.96), breaks = seq(0.7, 0.95, by = 0.05))+
+  labs(x = "AUROC", y = "Sample Size N") +
+  theme_classic() -> lineplot_prevalence
+
+
+library(patchwork)
+lineplot_auc85 / lineplot_prevalence
+
+
+
+
+###############################################################
+# Varying confidence interval pre-assumption, with AUROC 0.87, prevalence of 0.15
+prevalence_l <- c()
+auc_l <- c()
+n_l <- c()
+n1_l <- c()
+n2_l <- c()
+confw_l <- c()
+
+for (i in seq(from = 0.1, to = 0.5, by = 0.05)) {
+  auc_res <- prec_auc(auc = 0.87, prev = 0.15, conf.width = i, conf.level = 0.95)
+  prevalence_l <- append(prevalence_l, auc_res$prev)
+  auc_l <- append(auc_l, auc_res$auc)
+  n_l <- append(n_l, auc_res$n)
+  n1_l <- append(n1_l, auc_res$n1)
+  n2_l <- append(n2_l, auc_res$n2)
+  confw_l <- append(confw_l, auc_res$conf.width)
+}
+
+# my_list <- list(prevalence_l, auc_l, n_l, n1_l, n2_l)
+# my_df <- as.data.frame(my_list)
+
+df_confwVary <- as.data.frame(cbind(prevalence_l, auc_l, n_l, n1_l, n2_l, confw_l))
+
+ggplot(df_confwVary, aes(x=confw_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = n1_l, color="Green")) +
+  geom_line(aes(y = n2_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated",
+    values = c("red", "green", "blue"),
+    labels = c("Negative N", "Positive N", "Total N")
+  ) +
+  ggtitle("Sample Size Estimated - AUROC 0.87, Prevalence 0.15")+
+  scale_x_continuous(limits = c(0.1, 0.5), breaks = seq(0.1, 0.5, by = 0.05))+
+  scale_y_continuous(limits=c(0, 600), breaks=seq(0,600,by=50))+
+  labs(x = "Conf.Interval", y = "Sample Size N") +
+  theme_classic() -> lineplot_confw
+
+lineplot_confw
+
+
+
+
+###############################################################
+# Varying sample size, with AUROC 0.87, prevalence of 0.57
+prevalence_l <- c()
+auc_l <- c()
+n_l <- c()
+n1_l <- c()
+n2_l <- c()
+confw_l <- c()
+
+for (i in seq(from = 0.1, to = 0.5, by = 0.05)) {
+  auc_res <- prec_auc(auc = 0.864, prev = 0.25, conf.width = i, conf.level = 0.95)
+  prevalence_l <- append(prevalence_l, auc_res$prev)
+  auc_l <- append(auc_l, auc_res$auc)
+  n_l <- append(n_l, auc_res$n)
+  n1_l <- append(n1_l, auc_res$n1)
+  n2_l <- append(n2_l, auc_res$n2)
+  confw_l <- append(confw_l, auc_res$conf.width)
+}
+
+# my_list <- list(prevalence_l, auc_l, n_l, n1_l, n2_l)
+# my_df <- as.data.frame(my_list)
+
+df_confwVary <- as.data.frame(cbind(prevalence_l, auc_l, n_l, n1_l, n2_l, confw_l))
+
+ggplot(df_confwVary, aes(x=confw_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = n1_l, color="Green")) +
+  geom_line(aes(y = n2_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated",
+    values = c("red", "green", "blue"),
+    labels = c("Negative N", "Positive N", "Total N")
+  ) +
+  ggtitle("Sample Size Estimated - AUROC 0.864, Prevalence 0.2")+
+  scale_x_continuous(limits = c(0.2, 0.5), breaks = seq(0.2, 0.5, by = 0.05))+
+  scale_y_continuous(limits=c(0, 100), breaks=seq(0,100,by=10))+
+  labs(x = "AUROC", y = "Sample Size N") +
+  theme_classic() -> lineplot_confw
+
+lineplot_confw
+
+```
+
+
+
+```{r aurocTrialcheck, echo=FALSE}
+###############################################################
+# Varying confidence interval pre-assumption, with AUROC 0.784, prevalence of 0.5714
+prevalence_l <- c()
+auc_l <- c()
+n_l <- c()
+n1_l <- c()
+n2_l <- c()
+confw_l <- c()
+
+for (i in seq(from = 0.05, to = 0.5, by = 0.05)) {
+  auc_res <- prec_auc(auc = 0.784, prev = 0.5714, conf.width = i, conf.level = 0.95)
+  prevalence_l <- append(prevalence_l, auc_res$prev)
+  auc_l <- append(auc_l, auc_res$auc)
+  n_l <- append(n_l, auc_res$n)
+  n1_l <- append(n1_l, auc_res$n1)
+  n2_l <- append(n2_l, auc_res$n2)
+  confw_l <- append(confw_l, auc_res$conf.width)
+}
+
+# my_list <- list(prevalence_l, auc_l, n_l, n1_l, n2_l)
+# my_df <- as.data.frame(my_list)
+
+df_confwVary <- as.data.frame(cbind(prevalence_l, auc_l, n_l, n1_l, n2_l, confw_l))
+
+ggplot(df_confwVary, aes(x=confw_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = n1_l, color="Green")) +
+  geom_line(aes(y = n2_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated",
+    values = c("red", "green", "blue"),
+    labels = c("Negative N", "Positive N", "Total N")
+  ) +
+  ggtitle("Sample Size Estimated - AUROC 0.784, Prevalence 0.5714")+
+  scale_x_continuous(limits = c(0.05, 0.5), breaks = seq(0.05, 0.5, by = 0.05))+
+  scale_y_continuous(limits=c(0, 1000), breaks=seq(0,1000,by=50))+
+  labs(x = "Confidence Width", y = "Sample Size N") +
+  theme_classic() -> lineplot_confw
+
+lineplot_confw
+
+```
+
+
+## Therapy improve 6MWT distances
+```{r 6mwtTherapySampleSize, echo=FALSE}
+##################################
+##################################
+# Sample Size estimation for Therapy 6MWT (for now, need to move into another file)
+library(pwr)
+pwr::pwr.t.test(n = NULL, # note that n is per arm
+                sig.level = 0.05, type = "two.sample", 
+                alternative = "greater", power = 0.85, 
+                d = 20/10) # So, with 10m standard deviation, power of 0.85, total of 12 participants needed, with 6 participants in each group, with 10% dropout rate.
+
+pwr::pwr.t.test(n = NULL, # note that n is per arm
+                sig.level = 0.05, type = "two.sample", 
+                alternative = "greater", power = 0.9, 
+                d = 20/10) # So, with 10m standard deviation, power of 0.9, total of 14 participants needed, with 7 participants in each group, with 10% dropout rate.
+
+pwr.test <- pwr.t.test(n=NULL, sig.level=0.05, type="two.sample", alternative="greater", power=0.8, d=20/50)
+pwr.test
+pwr.test$n
+
+stddist.test <- c()
+n.test <- c()
+
+for (i in seq(10,50, by=5)){
+  pwr.test <- pwr.t.test(n=NULL, sig.level=0.05, type="two.sample", alternative="greater", power=0.8, d=20/i)
+  n.test <- append(n.test, round(pwr.test$n) * 2)
+  stddist.test <- append(stddist.test, i)
+}
+
+df.diststd.n <- data.frame(stddist=stddist.test, totaln=n.test)
+
+ggplot(data=df.diststd.n, aes(x=stddist, y=totaln)) + 
+  geom_line()+
+  ggtitle("Sample Size Estimated - Increase of 20m Distance, power=0.8")+
+  scale_y_continuous(limits=c(0, 160), breaks=seq(0,160,by=20))+
+  labs(x = "Standard Deviation of Distances", y = "Total Sample Size N") +
+  theme_classic() -> lineplot_stddist
+
+lineplot_stddist
+##############################################################
+
+```
+
+
+
+
+## Sample Size calculation using the AUROC, prediction model using AUROC values
+Reference:
+Hanley, JA and McNeil, BJ (1982) The Meaning and Use of the Area under a Receiver Operating Characteristic (ROC) Curve. Radiology 148, 29-36
+
+```{r Trial3SampleSize, echo=FALSE}
+
+library(presize)
+
+
+####################################
+# Use Odd Ratios for Sample Size (with prevalence, proportions)
+prec_or(p1 = 0.076, p2 = 0.043, conf.width = 0.2)
+
+
+######################################
+# Use AUROC for Sample Size 
+prec_auc(auc = 0.784, prev = 0.5, conf.width = 0.2, conf.level = 0.95)
+
+
+###############################################################
+# Varying AUROC, with prevalence of 0.5 (Control:Case 1:1 ratio)
+prevalence_l <- c()
+auc_l <- c()
+n_l <- c()
+n1_l <- c()
+n2_l <- c()
+
+for (i in seq(from = 0.7, to = 0.96, by = 0.02)) {
+  auc_res <- prec_auc(auc = i, prev = 0.5, conf.width = 0.2, conf.level = 0.95)
+  prevalence_l <- append(prevalence_l, auc_res$prev)
+  auc_l <- append(auc_l, auc_res$auc)
+  n_l <- append(n_l, auc_res$n)
+  n1_l <- append(n1_l, auc_res$n1)
+  n2_l <- append(n2_l, auc_res$n2)
+}
+
+df_aucVary <- as.data.frame(cbind(prevalence_l, auc_l, n_l, n1_l, n2_l))
+
+library(ggplot2)
+ggplot(df_aucVary, aes(x=auc_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = n1_l, color="Green")) +
+  geom_line(aes(y = n2_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated - Prevalence 0.5",
+    values = c("red", "green", "blue"),
+    labels = c("Negative N", "Positive N", "Total N")
+  ) +
+  scale_x_continuous(limits = c(0.7, 0.96), breaks = seq(0.7, 0.95, by = 0.05))+
+  labs(x = "AUROC", y = "Sample Size N") +
+  theme_classic() -> lineplot_prevalence
+
+lineplot_prevalence
+
+```
+
+
+
+
+## Sample size estimation for the UACR, 3 study arms ('ThreeArmedTrials' package is removed on 2024-04-20)
+```{r UACRsampleSizeTrial4, include=FALSE}
+ 
+
+library(WebPower)
+wp.kanova(ndf = 2, f = 0.25, ng = 12, alpha = 0.05, power = 0.8)
+wp.kanova(ndf = 2, f = 0.3, ng = 12, alpha = 0.05, power = 0.8)
+wp.kanova(ndf = 2, f = 0.325, ng = 12, alpha = 0.05, power = 0.8)
+wp.kanova(ndf = 2, f = 0.35, ng = 12, alpha = 0.05, power = 0.8)
+wp.kanova(ndf = 2, f = 0.4, ng = 12, alpha = 0.05, power = 0.8)
+
+
+# • ndf=numerator degrees of freedom
+# • f=effect size
+# • ng=number of groups
+# • alpha=significance level
+# • power=statistical power
+
+# Multi-Arm and Multi-stage design
+# devtools::install_github("mjg211/multiarm")
+library(DT)
+library(GA)
+library(gmp)
+library(arrangements)
+library(ggthemes)
+library(iterpc)
+library(rclipboard)
+library(RcppGSL)
+library(Rfast)
+library(shinyalert)
+library(shiny)
+library(multiarm)
+
+
+# Multiarm single stage
+des <- des_ss_norm(K          = 2,
+                   alpha      = 0.05,
+                   beta       = 0.2,
+                   delta1     = 0.25,
+                   delta0     = 0,
+                   sigma      = rep(0.3, 3),
+                   ratio      = rep(1, 2),
+                   correction = "bonferroni",
+                   power      = "marginal")
+
+class(des)
+paste0("Per study arm: ", round(des$n[1]*1.2, digits=0), 
+       "; Total: ", round(des$n[1]*1.2, digits=0) * 3)
+des$opchar
+
+
+```
+
+
+
+## Detection of Diabetes
+## Sample Size calculation using the AUROC, prediction model using AUROC values
+Reference:
+Hanley, JA and McNeil, BJ (1982) The Meaning and Use of the Area under a Receiver Operating Characteristic (ROC) Curve. Radiology 148, 29-36
+Haynes et al., (2021). presize: An R-package for precision-based sample size calculation in clinical research. Journal of Open Source Software, 6(60), 3118, https://doi.org/10.21105/joss.03118
+
+
+```{r DecideSampleAUROCTrial5, echo=FALSE}
+
+# Precision-based AUROC
+library(presize)
+N <- 300/1.2
+prev <- 1/3
+auc <- 0.8
+prec <- prec_auc(auc, prev, n = N)
+cwidth <- prec$conf.width
+# sample size
+prec_auc(auc, prev, conf.width = cwidth)
+
+
+prec_auc(auc = 0.8, prev = 1/3, conf.width = 0.14, conf.level = 0.95)
+
+
+
+library(pROC)
+power.roc.test(ncases=200, ncontrols=100, auc=0.8, sig.level=0.05)
+power.roc.test(ncases=200/1.2, ncontrols=100/1.2, auc=0.8, sig.level=0.05)
+
+
+power.roc.test(auc=0.784, sig.level=0.05, power=0.95, kappa=1/2)
+
+###################################################
+# Varying auc values, power of 0.9, kappa of 1/2 (control to case ratio)
+auc_l <- c()
+ncases_l <- c()
+ncontrols_l <- c()
+n_l <- c()
+
+for (i in seq(from = 0.6, to = 0.95, by = 0.05)) {
+  auc_res <- power.roc.test(auc = i, sig.level=0.05, power=0.9, kappa=1/2)
+  auc_l <- append(auc_l, auc_res$auc)
+  ncases_l <- append(ncases_l, auc_res$ncases)
+  ncontrols_l <- append(ncontrols_l, auc_res$ncontrols)
+  n_l <- append(n_l, auc_res$ncases + auc_res$ncontrols)
+}
+
+df_power_auc <- as.data.frame(cbind(auc_l, n_l, ncases_l, ncontrols_l))
+
+ggplot(df_power_auc, aes(x=auc_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = ncases_l, color="Green")) +
+  geom_line(aes(y = ncontrols_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated",
+    values = c("red", "green", "blue"),
+    labels = c("Control N", "Case N", "Total N")
+  ) +
+  ggtitle("Power-based Sample Size Estimated - AUROC vary 0.6-0.95, Control:Case ratio 1:2")+
+  scale_x_continuous(limits = c(0.6, 1), breaks = seq(0.6, 1, by = 0.05))+
+  scale_y_continuous(limits=c(0, 400), breaks=seq(0, 400,by=20))+
+  labs(x = "AUROC values", y = "Sample Size N") +
+  theme_classic() +
+  theme(legend.position = 'bottom', legend.direction = "horizontal") -> lineplot_power_auc
+
+lineplot_power_auc
+
+
+
+
+
+###############################################################
+# Varying confidence interval pre-assumption, with AUROC 0.8, prevalence of 1/3
+prevalence_l <- c()
+auc_l <- c()
+n_l <- c()
+n1_l <- c()
+n2_l <- c()
+confw_l <- c()
+
+for (i in seq(from = 0.05, to = 0.5, by = 0.05)) {
+  auc_res <- prec_auc(auc = 0.8, prev = 1/3, conf.width = i, conf.level = 0.95)
+  prevalence_l <- append(prevalence_l, auc_res$prev)
+  auc_l <- append(auc_l, auc_res$auc)
+  n_l <- append(n_l, auc_res$n)
+  n1_l <- append(n1_l, auc_res$n1)
+  n2_l <- append(n2_l, auc_res$n2)
+  confw_l <- append(confw_l, auc_res$conf.width)
+}
+
+df_confwVary <- as.data.frame(cbind(prevalence_l, auc_l, n_l, n1_l, n2_l, confw_l))
+
+ggplot(df_confwVary, aes(x=confw_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = n1_l, color="Green")) +
+  geom_line(aes(y = n2_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated",
+    values = c("green", "red", "blue"),
+    labels = c("Case N", "Control N", "Total N")
+  ) +
+  ggtitle("Precision-based Sample Size Estimated - AUROC 0.8, Prevalence 1/3")+
+  scale_x_continuous(limits = c(0.05, 0.5), breaks = seq(0.05, 0.5, by = 0.05))+
+  scale_y_continuous(limits=c(0, 2000), breaks=seq(0, 2000,by=100))+
+  labs(x = "AUROC confidence interval", y = "Sample Size N") +
+  theme_classic() +
+  theme(legend.position = 'bottom', legend.direction = "horizontal") -> lineplot_confw
+
+lineplot_confw
+
+# Cluster by 5 binary categorical variables
+# n=2 diabetic & non-diabetic groups; n=5 variables -> N=10 groups
+library(WebPower)
+wp.kanova(ndf = 1, f = 0.25, ng = 4, alpha = 0.05, power = 0.8)
+
+wp.rmanova(ng = 4, nm = 4, f = 0.25, alpha = 0.05, power = 0.8, type = 1) 
+
+wp.rmanova(ng = 5, nm = 5, f = 0.25, alpha = 0.05, power = 0.8, type = 1) 
+
+wp.rmanova(ng = 4, nm = 5, f = 0.25, alpha = 0.05, power = 0.8, type = 1) 
+
+wp.rmanova(ng = 4, nm = 2, f = 0.25, alpha = 0.05, power = 0.8, type = 1) 
+
+wp.rmanova(ng = 4, nm = 2, f = 0.25, alpha = 0.05, power = 0.8, type = 1) 
+
+wp.rmanova(n=150, ng = 4, nm=3, f = 0.25, alpha = 0.05, power = NULL, type = 1) 
+
+
+wp.rmanova(n=200/1.2, ng = 4, nm=2, f = 0.25, alpha = 0.05, power = NULL, type = 1) 
+
+wp.rmanova(n=200, ng = 4, nm=2, f = 0.25, alpha = 0.05, power = NULL, type = 1) 
+# 20% dropout rate and deaths
+
+wp.rmanova(n=2526, ng = 5, nm=2, f = NULL, alpha = 0.05, power = 0.8, type = 1) 
+
+
+# library(PowerTOST)
+library(PowerTOST)
+power.TOST(CV = 0.25, n = c(150, 150), design = "parallel")
+
+
+```
+
+
+
+# August 2024: Trial Expansion Grant Sample Size Estimation
+Reference:
+
+* [Power Analysis](https://www.statmethods.net/stats/power.html)
+* [PowerTOST](https://github.com/Detlew/PowerTOST?tab=readme-ov-file#power-analysis)
+* [presize](https://ctu-bern.github.io/presize/)
+* [Effect Size online calculator](https://www.psychometrica.de/effect_size.html)
+* [Sample Size Online calculator](https://riskcalc.org/samplesize/)
+
+
+# Sep2024: Grant Sample Size
+
+```{r trial6SampleSize, include=TRUE, keep_text = TRUE}
+
+# Objective 1
+library(pROC)
+power.roc.test(auc=0.6, sig.level=0.05, power=0.8, kappa=1/4)
+power.roc.test(auc=0.8, sig.level=0.05, power=0.8, kappa=1/4)
+
+power.roc.test(ncases=600, ncontrols=150, auc=0.6, sig.level=0.05)
+power.roc.test(ncases=150, ncontrols=150, auc=0.6, sig.level=0.05)
+
+######################################################################################
+
+p.adjust(0.0001, method = "fdr", n = 500)
+
+library(pwr)
+pwr.anova.test(k = 4, n = NULL, f = 0.14, sig.level = 0.05, power = 0.8)
+
+pwr.anova.test(k = 4, n = 750, f = NULL, sig.level = 0.05, power = 0.8)
+
+pwr.anova.test(k = 5, n = NULL, f = 0.25, sig.level = 0.05, power = 0.8)
+
+pwr.anova.test(k = 5, n = NULL, f = 0.2, sig.level = 0.05, power = 0.8)
+
+for (i in seq(0.1, 0.4, 0.05)){
+  print(i)
+  print(pwr.anova.test(k=5, n=NULL, f = i, sig.level = 0.05, power = 0.8))
+}
+
+pwr.anova.test_result <- pwr.anova.test(k = 4, n = NULL, f = 0.25, sig.level = 0.05, power = 0.8)
+print(paste0("Assuming 4 groups, medium effect size of 0.25, significance level of 0.05, and 0.8 power, the required sample size per group: ", ceiling(pwr.anova.test_result$n), "; Total sample size: ", ceiling(pwr.anova.test_result$n)*4))
+
+
+```
+
+
+# Sep2024: another grant
+
+```{r trial8SampleSize, include=TRUE, keep_text = TRUE}
+
+
+library(pROC)
+power.roc.test(auc=0.85, sig.level=0.05, power=0.9, kappa=1/0.3)
+power.roc.test(auc=0.8, sig.level=0.05, power=0.9, kappa=1/0.3)
+
+power.roc.test(ncases=144, ncontrols=336, auc=0.85, sig.level=0.05)
+
+
+library(presize)
+prec_auc(auc = 0.85, prev = 0.3, conf.width = 0.1, n = NULL, conf.level = 0.95)
+prec_auc(auc = 0.85, prev = 140/(140+325), conf.width = NULL, n = 465, conf.level = 0.95)
+
+
+
+######################################################################################
+print("Aim 2: Assume 3 centres with medium effect size f 0.14")
+
+p.adjust(0.0001, method = "fdr", n = 500)
+
+# pwr.anova.test
+print("pwr.anova.test: Cohen suggests that f values of 0.1, 0.25, and 0.4 represent small, medium, and large effect sizes respectively.")
+pwr.anova.test(k = 3, n = 133, f = NULL, sig.level = 0.05, power = 0.9)
+
+library(pwr)
+pwr.anova.test(k = 3, n = NULL, f = 0.25, sig.level = 0.05, power = 0.9)
+pwr.anova.test(k = 3, n = NULL, f = 0.1, sig.level = 0.05, power = 0.9)
+
+pwr.anova.test(k = 3, n = NULL, f = 0.2, sig.level = 0.05, power = 0.9)
+pwr.anova.test(k = 3, n = 155, f = NULL, sig.level = 0.05, power = 0.9)
+
+
+pwr.anova.test_result <- pwr.anova.test(k = 4, n = NULL, f = 0.25, sig.level = 0.05, power = 0.8)
+print(paste0("Assuming 4 groups, medium effect size of 0.25, significance level of 0.05, and 0.8 power, the required sample size per group: ", ceiling(pwr.anova.test_result$n), "; Total sample size: ", ceiling(pwr.anova.test_result$n)*4))
+
+############################################################
+library(Superpower)
+power_oneway_ancova(
+  mu = c(7.89, 7.74, 5.58, 5.61),
+  n_cov = 1,
+  sd = sqrt(1.9^2+1.74^2+0.28^2+0.39^2),
+  r2 = 0.02,
+  alpha_level = .05,
+  #n = c(33,33,33,33),
+  beta_level = 0.1,
+  round_up = TRUE,
+  type = "approx"
+)
+
+print(paste0("HbA1c mean and sd values for 3 CV clinics with 20% dropout rate: ", ceiling(21*4*3*1.2)))
+
+
+power_oneway_ancova(
+  mu = c(400,450,500),
+  n_cov = 3,
+  sd = 100,
+  r2 = .25,
+  alpha_level = .05,
+  #n = c(17,17,17),
+  beta_level = .2,
+  round_up = TRUE,
+  type = "approx"
+)
+
+################################################################
+
+library(presize)
+# Varying AUROC, with prevalence of 0.3 
+prevalence_l <- c()
+auc_l <- c()
+n_l <- c()
+n1_l <- c()
+n2_l <- c()
+
+for (i in seq(from = 0.6, to = 0.98, by = 0.04)) {
+  auc_res <- prec_auc(auc = i, prev = 0.3, conf.width = 0.1, conf.level = 0.95)
+  prevalence_l <- append(prevalence_l, auc_res$prev)
+  auc_l <- append(auc_l, auc_res$auc)
+  n_l <- append(n_l, auc_res$n)
+  n1_l <- append(n1_l, auc_res$n1)
+  n2_l <- append(n2_l, auc_res$n2)
+}
+
+df_aucVary <- as.data.frame(cbind(prevalence_l, auc_l, n_l, n1_l, n2_l))
+
+library(ggplot2)
+ggplot(df_aucVary, aes(x=auc_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = n1_l, color="Green")) +
+  geom_line(aes(y = n2_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated - Prevalence 0.3",
+    values = c("red", "green", "blue"),
+    labels = c("Negative N", "Positive N", "Total N")
+  ) +
+  scale_x_continuous(limits = c(0.6, 1), breaks = seq(0.6, 1, by = 0.05))+
+  scale_y_continuous(limits = c(0, 700), breaks = seq(0, 700, by = 50))+
+  labs(x = "AUROC", y = "Sample Size N") +
+  theme_classic() -> lineplot_prevalence
+
+lineplot_prevalence
+
+prec_auc(auc = 0.85, prev = 0.3, conf.width = 0.13, conf.level = 0.95)
+
+
+
+###############################################################
+# Varying confidence interval pre-assumption, with AUROC 0.85, prevalence of 0.3
+prevalence_l <- c()
+auc_l <- c()
+n_l <- c()
+n1_l <- c()
+n2_l <- c()
+confw_l <- c()
+
+for (i in seq(from = 0.05, to = 0.3, by = 0.05)) {
+  auc_res <- prec_auc(auc = 0.85, prev = 0.3, conf.width = i, conf.level = 0.95)
+  prevalence_l <- append(prevalence_l, auc_res$prev)
+  auc_l <- append(auc_l, auc_res$auc)
+  n_l <- append(n_l, auc_res$n)
+  n1_l <- append(n1_l, auc_res$n1)
+  n2_l <- append(n2_l, auc_res$n2)
+  confw_l <- append(confw_l, auc_res$conf.width)
+}
+
+df_confwVary <- as.data.frame(cbind(prevalence_l, auc_l, n_l, n1_l, n2_l, confw_l))
+
+ggplot(df_confwVary, aes(x=confw_l)) +
+  geom_line(aes(y = n_l, color="Red")) +
+  geom_line(aes(y = n1_l, color="Green")) +
+  geom_line(aes(y = n2_l, color="Blue")) +
+  # Customize the colors and labels in the legend
+  scale_color_manual(
+    name = "Sample Size Estimated",
+    values = c("green", "red", "blue"),
+    labels = c("Control N", "Case N", "Total N")
+  ) +
+  ggtitle("Precision-based Sample Size Estimated - AUROC 0.85, Prevalence 0.3")+
+  scale_x_continuous(limits = c(0.05, 0.3), breaks = seq(0.05, 0.3, by = 0.05))+
+  scale_y_continuous(limits=c(0, 1500), breaks=seq(0, 1500,by=100))+
+  labs(x = "AUROC confidence interval", y = "Sample Size N") +
+  theme_classic() +
+  theme(legend.position = 'bottom', legend.direction = "horizontal") -> lineplot_confw
+
+lineplot_confw
+
+
+```
+
+
+## v2025Jan21: sample size estimation for Cluster Analysis
+
+```{r clusterAnalysis2025Jan, include=TRUE, keep_text = TRUE, warning=FALSE, message=FALSE}
+# 
+# library(cluster)
+# 
+# print("Assume 4 clusters, 500-2500 sample size, estimate the Sihouette Scores")
+# # Simulation parameters
+# set.seed(123)
+# clusters <- 4               
+# sample_sizes <- seq(500, 2500, by = 100)  
+# iterations <- 10             
+# threshold <- 0.5             # Desired minimum Silhouette Score
+# results <- data.frame(SampleSize = integer(), SilhouetteScore = numeric())
+# 
+# # Function to generate synthetic data
+# generate_data <- function(n, clusters) {
+#   data <- do.call(rbind, lapply(1:clusters, function(i) {
+#     matrix(rnorm(n / clusters * 2, mean = i * 3), ncol = 2)
+#   }))
+#   return(data)
+# }
+# 
+# # Loop over sample sizes
+# for (n in sample_sizes) {
+#   silhouette_scores <- numeric(iterations)
+#   
+#   for (i in 1:iterations) {
+#     # Generate data
+#     data <- generate_data(n, clusters)
+#     
+#     # Apply K-Means clustering
+#     kmeans_result <- kmeans(data, centers = clusters)
+#     
+#     # Calculate Silhouette Score
+#     silhouette_scores[i] <- mean(silhouette(kmeans_result$cluster, dist(data))[, 3])
+#   }
+#   
+#   # Store average Silhouette Score
+#   avg_score <- mean(silhouette_scores)
+#   results <- rbind(results, data.frame(SampleSize = n, SilhouetteScore = avg_score))
+# }
+# 
+# # Visualize results
+# library(ggplot2)
+# ggplot(results, aes(x = SampleSize, y = SilhouetteScore)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_hline(yintercept = threshold, linetype = "dashed", color = "red") +
+#   labs(title = paste0("Sample Size Estimation Using Silhouette Scores: ", clusters, " clusters"),
+#        x = "Sample Size",
+#        y = "Average Silhouette Score") +
+#   theme_minimal()
+# 
+# # Find minimum sample size meeting threshold
+# min_sample <- results$SampleSize[results$SilhouetteScore >= threshold][1]
+# cat("Minimum sample size meeting the threshold:", min_sample, "\n")
+# 
+# ########################################################################################33
+# 
+# print("Assume 7 clusters, 500-2500 sample size, estimate the Sihouette Scores")
+# # Simulation parameters
+# set.seed(123)
+# clusters <- 7               
+# sample_sizes <- seq(500, 2500, by = 100)  
+# iterations <- 10             # Number of simulations per sample size
+# threshold <- 0.5             # Desired minimum Silhouette Score
+# results <- data.frame(SampleSize = integer(), SilhouetteScore = numeric())
+# 
+# # Function to generate synthetic data
+# generate_data <- function(n, clusters) {
+#   data <- do.call(rbind, lapply(1:clusters, function(i) {
+#     matrix(rnorm(n / clusters * 2, mean = i * 3), ncol = 2)
+#   }))
+#   return(data)
+# }
+# 
+# # Loop over sample sizes
+# for (n in sample_sizes) {
+#   silhouette_scores <- numeric(iterations)
+#   
+#   for (i in 1:iterations) {
+#     # Generate data
+#     data <- generate_data(n, clusters)
+#     
+#     # Apply K-Means clustering
+#     kmeans_result <- kmeans(data, centers = clusters)
+#     
+#     # Calculate Silhouette Score
+#     silhouette_scores[i] <- mean(silhouette(kmeans_result$cluster, dist(data))[, 3])
+#   }
+#   
+#   # Store average Silhouette Score
+#   avg_score <- mean(silhouette_scores)
+#   results <- rbind(results, data.frame(SampleSize = n, SilhouetteScore = avg_score))
+# }
+# 
+# # Visualize results
+# library(ggplot2)
+# ggplot(results, aes(x = SampleSize, y = SilhouetteScore)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_hline(yintercept = threshold, linetype = "dashed", color = "red") +
+#   labs(title = paste0("Sample Size Estimation Using Silhouette Scores: ", clusters, " clusters"),
+#        x = "Sample Size",
+#        y = "Average Silhouette Score") +
+#   theme_minimal()
+# 
+# # Find minimum sample size meeting threshold
+# min_sample <- results$SampleSize[results$SilhouetteScore >= threshold][1]
+# cat("Minimum sample size meeting the threshold:", min_sample, "\n")
+# 
+# ######################################################################################
+# # Load necessary libraries
+# library(cluster)
+# 
+# # Parameters
+# set.seed(123)
+# clusters <- 7                  # Number of clusters
+# sample_sizes <- seq(500, 2500, by = 200)  # Sample sizes to test
+# iterations <- 100              # Number of simulations per sample size
+# threshold <- 0.5               # Target Silhouette Score
+# desired_power <- 0.8           # Desired power (80%)
+# results <- data.frame(SampleSize = integer(), Power = numeric())
+# 
+# # Function to generate synthetic data
+# generate_data <- function(n, clusters) {
+#   data <- do.call(rbind, lapply(1:clusters, function(i) {
+#     matrix(rnorm(n / clusters * 2, mean = i * 3), ncol = 2)
+#   }))
+#   return(data)
+# }
+# 
+# # Loop through sample sizes
+# for (n in sample_sizes) {
+#   successes <- 0
+#   
+#   for (i in 1:iterations) {
+#     # Generate data
+#     data <- generate_data(n, clusters)
+#     
+#     # Apply K-Means clustering
+#     kmeans_result <- kmeans(data, centers = clusters)
+#     
+#     # Calculate Silhouette Score
+#     sil <- silhouette(kmeans_result$cluster, dist(data))
+#     avg_score <- mean(sil[, 3])
+#     
+#     # Check if the Silhouette Score meets the threshold
+#     if (avg_score >= threshold) {
+#       successes <- successes + 1
+#     }
+#   }
+#   
+#   # Calculate power for this sample size
+#   power <- successes / iterations
+#   results <- rbind(results, data.frame(SampleSize = n, Power = power))
+# }
+# 
+# # Visualize results
+# library(ggplot2)
+# ggplot(results, aes(x = SampleSize, y = Power)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_hline(yintercept = desired_power, linetype = "dashed", color = "red") +
+#   labs(title = paste0("Power Analysis for Silhouette Score (assume ", clusters, " clusters)"),
+#        x = "Sample Size",
+#        y = "Power") +
+#   theme_minimal()
+# 
+# # Find minimum sample size meeting desired power
+# min_sample <- results$SampleSize[results$Power >= desired_power][1]
+# cat("Minimum sample size to achieve desired power of 80%:", min_sample, "\n")
+
+
+```
+
+## v2025Feb3&4: another grant sample size
+
+```{r Trial92025Feb04, include=TRUE, keep_text = TRUE, warning=FALSE, message=FALSE}
+
+#######################################################################
+# Cohen's kappa
+library(kappaSize)
+
+print("The CIBinary function offers detailed sample size estimation for studies with the following characteristics: Binary outcome (two categories); Multiple raters (2 to 6); Confidence interval perspective")
+CIBinary(kappa0=0.7, kappaL=0.6, kappaU=0.8, props=0.20, alpha=0.05, raters = 3)
+
+CIBinary(kappa0=0.7, kappaL=0.6, kappaU=0.8, props=0.7, alpha=0.05, raters = 3)
+
+
+# Load necessary libraries
+library(kappaSize)
+library(ggplot2)
+library(reshape2)
+
+# Define the range of kappa0 and props values
+kappa_values <- seq(0.2, 0.8, by = 0.1)  # Anticipated kappa values
+props_values <- seq(0.1, 0.9, by = 0.1)  # Prevalence rates
+
+# Initialize an empty data frame to store results
+results <- data.frame()
+
+# Loop through combinations of kappa0 and props to calculate sample size
+for (kappa in kappa_values) {
+  for (props in props_values) {
+    # Estimate sample size using CIBinary
+    sample_size <- CIBinary(kappa0 = kappa, 
+                            kappaL = kappa - 0.1, 
+                            kappaU = kappa + 0.1, 
+                            props = props, 
+                            alpha = 0.05,
+                            raters = 3)$n
+    
+    # Append results to the data frame
+    results <- rbind(results, data.frame(Kappa = kappa, Prevalence = props, SampleSize = sample_size, precision = 0.1))
+  }
+}
+
+
+# Reshape data for heatmap visualization
+heatmap_data <- dcast(results, Kappa ~ Prevalence, value.var = "SampleSize")
+
+# Plot 1: Heatmap of sample sizes
+heatmap_plot <- ggplot(melt(heatmap_data, id.vars = "Kappa"), aes(x = variable, y = Kappa, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "orange", high = "darkblue") +
+  labs(title = "Sample Size Heatmap (precision 0.1 each side)", x = "Prevalence (props)", y = "Anticipated Kappa (kappa0)", fill = "Sample Size") +
+  theme_minimal()
+
+# Plot 2: Line plot of sample size vs prevalence for each kappa0
+line_plot <- ggplot(results, aes(x = Prevalence, y = SampleSize, color = as.factor(Kappa))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Sample Size (precision 0.1 each side)", x = "Prevalence (props)", y = "Sample Size", color = "Kappa0") +
+  theme_pubr()
+
+library(gridExtra)
+
+grid.arrange(heatmap_plot, line_plot, ncol=2)
+
+
+####################################################
+# precision 0.05
+# Loop through combinations of kappa0 and props to calculate sample size
+for (kappa in kappa_values) {
+  for (props in props_values) {
+    # Estimate sample size using CIBinary
+    sample_size <- CIBinary(kappa0 = kappa, 
+                            kappaL = kappa - 0.05, 
+                            kappaU = kappa + 0.05, 
+                            props = props, 
+                            alpha = 0.05,
+                            raters = 3)$n
+    
+    # Append results to the data frame
+    results <- rbind(results, data.frame(Kappa = kappa, Prevalence = props, SampleSize = sample_size, precision = 0.05))
+  }
+}
+
+
+# Reshape data for heatmap visualization
+heatmap_data_prec05 <- dcast(results %>% filter(precision == 0.05), Kappa ~ Prevalence, value.var = "SampleSize")
+
+# Plot 1: Heatmap of sample sizes
+heatmap_plot_prec05 <- ggplot(melt(heatmap_data_prec05, id.vars = "Kappa"), aes(x = variable, y = Kappa, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "orange", high = "darkblue") +
+  labs(title = "Sample Size Heatmap (precision 0.05 each side)", x = "Prevalence (props)", y = "Anticipated Kappa (kappa0)", fill = "Sample Size") +
+  theme_minimal()
+
+# Plot 2: Line plot of sample size vs prevalence for each kappa0
+line_plot_prec05 <- ggplot(results %>% filter(precision == 0.05), aes(x = Prevalence, y = SampleSize, color = as.factor(Kappa))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Sample Size (precision 0.05 each side)", x = "Prevalence (props)", y = "Sample Size", color = "Kappa0") +
+  theme_pubr()
+
+
+################################################################################
+# Power check
+
+# Define the range of kappa0 and props values
+kappa_values <- seq(0.1, 0.7, by = 0.1)  # Anticipated kappa values
+props_values <- seq(0.1, 0.9, by = 0.1)  # Prevalence rates
+
+# Initialize an empty data frame to store results
+results_power <- data.frame()
+
+PowerBinary(kappa0=0.6, kappa1=0.8, props=0.20, alpha=0.05, power=0.80)
+
+for (kappa in kappa_values) {
+  for (props in props_values) {
+    # Estimate sample size using CIBinary
+    sample_size <- PowerBinary(kappa0 = kappa, 
+                            kappa1 = kappa + 0.2, 
+                            props = props, 
+                            alpha = 0.05,
+                            raters = 3)$N
+    
+    # Append results to the data frame
+    results_power <- rbind(results_power, data.frame(Kappa = kappa, Kappa1 = kappa+0.2, Prevalence = props, SampleSize =ceiling(sample_size)))
+  }
+}
+
+
+# Reshape data for heatmap visualization
+heatmap_data_power <- dcast(results_power, Kappa ~ Prevalence, value.var = "SampleSize")
+
+# Plot 1: Heatmap of sample sizes
+heatmap_plot_power <- ggplot(melt(heatmap_data_power, id.vars = "Kappa"), aes(x = variable, y = Kappa, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "orange", high = "darkblue") +
+  labs(title = "Sample Size Heatmap (kappa+0.2 ofr alternative kappa)", x = "Prevalence (props)", y = "Anticipated Kappa (kappa0)", fill = "Sample Size") +
+  theme_minimal()
+
+# Plot 2: Line plot of sample size vs prevalence for each kappa0
+line_plot_power <- ggplot(results_power, aes(x = Prevalence, y = SampleSize, color = as.factor(Kappa))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Sample Size (kappa+0.2 ofr alternative kappa)", x = "Prevalence (props)", y = "Sample Size", color = "Kappa0") +
+  theme_pubr()
+
+##############################################################################33
+library(pwr)
+
+# Expected Cohen's Kappa (κ)
+expected_kappa <- 0.4  # Adjust based on study expectations (e.g., 0.2 = slight, 0.5 = moderate)
+alpha <- 0.05  # Significance level
+power <- 0.8   # Desired power (80%)
+
+# Approximate effect size for Cohen's Kappa
+effect_size <- sqrt(expected_kappa / (1 - expected_kappa))
+
+# Calculate sample size using power analysis
+sample_size <- pwr.t.test(d = effect_size, sig.level = alpha, power = power, type = "two.sample")$n
+
+# Print estimated sample size
+cat("Required sample size per group:", ceiling(sample_size), "\n")
+
+###################################
+library(ICC.Sample.Size)
+
+# Define expected ICC and power level
+icc_sample <- calculateIccSampleSize(
+  k = 2,   # Two raters: AI and HCP
+  # icc0 = 0.4,  # Expected ICC
+  p=0.8,
+  p0=0.6,
+  alpha = 0.05,
+  power = 0.8
+)
+
+print(icc_sample)
+
+############################################################################
+library(pROC)
+
+# Compute sample size for AUC comparison
+roc_power <- power.roc.test(auc = 0.7, # Expected AUC
+                            auc2 = 0.8, # Expected AUC for comparison
+                            power = 0.8, alpha = 0.05)
+
+print(roc_power)
+
+
+CIBinary(kappa0=0.7, kappaL=0.6, kappaU=0.8, props=c(0.5, 0.3, 0.6), alpha=0.05, raters = 3)
+
+prec_kappa(kappa = 0.7, n = NULL, conf.width = 0.2, raters = 3, conf.level = 0.95, n_category = 2, props = c(0.2, 0.8))
+
+FixedN3Cats(kappa0=0.7, n=200, props=c(0.33, 0.34, 0.33), alpha=0.05, raters=3)
+
+####################################################################################
+print("MEDTEQ Sample Size Estimation")
+
+library(kappaSize)
+print("The CIBinary function offers detailed sample size estimation for studies with the following characteristics: Binary outcome (two categories); Multiple raters (2 to 6); Confidence interval perspective")
+CIBinary(kappa0=0.7, kappaL=0.6, kappaU=0.8, props=0.20, alpha=0.05, raters = 3)
+PowerBinary(kappa0=0.6, kappa1=0.8, props=0.20, alpha=0.05, power=0.80)
+
+PowerBinary(kappa0=0.6, kappa1=0.8, props=0.20, alpha=0.05, power=0.80, raters = 3)
+PowerBinary(kappa0=0.7, kappa1=0.8, props=0.20, alpha=0.05, power=0.80, raters =3 )
+
+```
+
+## Qualitative Research
+
+```{r qualitativeResearchSampleSize, include=TRUE}
+
+
+set.seed(123)
+
+# Simulate theme discovery for sample sizes 1 through 50
+sample_sizes <- 1:50
+new_themes <- sapply(sample_sizes, function(n) length(unique(rpois(n, lambda = 5))))
+
+# Plotting the results
+plot(sample_sizes, new_themes, type = "b", pch = 19, col = "blue",
+     xlab = "Sample Size", ylab = "Unique Themes Discovered",
+     main = "Estimated Thematic Saturation") +
+abline(h = max(new_themes) * 0.9, col = "red", lty = 2)  # 90% saturation level
+
+
+
+```
+
+## sample size for surveys
+```{r}
+
+library(samplesize4surveys)
+
+# Sample size for estimating a proportion
+# N = 10000 population
+# P = 0.5 estimated proportion
+# d = 0.05 margin of error
+# DEFF = 1 design effect
+# conf = 0.95 confidence level
+
+ss4p(N = 1000, P = 0.5, d = 0.05, DEFF = 1, conf = 0.95, plot = TRUE)
+
+ss4p(N = 1000, P = 0.1, d = 0.05, DEFF = 1, conf = 0.95, plot = TRUE)
+
+
+ss4p(N = 1000, P = 0.1, d = 0.1, DEFF = 1, conf = 0.95, plot = TRUE)
+
+
+```
+
+
+
+## Sample Size Estimation (July 2025): HF
+```{r include=TRUE}
+
+###############################################################################
+# Article: Klein et al. 2025. HF patients Wearable Sensing using AI for estimating PCWP (estimating pulmonary capillary wedge pressure)
+bland_altman_sample_size <- function(sd_diff, half_width, alpha = 0.05) {
+  z <- qnorm(1 - alpha / 2)
+  n <- (z * sqrt(3) * sd_diff / half_width)^2
+  return(ceiling(n))
+}
+
+bland_altman_sample_size(sd_diff = 5, half_width = 2)
+bland_altman_sample_size(sd_diff = 5.57, half_width = 10.9)
+# bland_altman_sample_size(sd_diff = 21.8, half_width = 5.57)
+
+
+sd_diff <- 5.75       # Estimated SD of differences between methods
+delta <- 10.9         # Desired half-width of limits of agreement
+alpha <- 0.05      # Confidence level
+# Z-value for 95% CI
+z <- qnorm(1 - alpha / 2)
+# Sample size calculation
+n <- (z * sd_diff / delta)^2
+ceiling(n)
+
+
+
+######################################################################
+
+# Use Sensor Data for detecting HF and also above/below median within HF patients
+
+library(MultiPower)
+library(FDRsampsize)
+library(lpSolve)
+
+set.seed(123)
+
+# sensor data
+df__ <- read.csv("ReplaceWithFile.csv")[, -1]
+
+# Task by Task to check power
+
+df_agebmi <- df %>% dplyr::select(age_at_consent, bmi_visit1) 
+
+df___baseline <- df__ %>%
+  dplyr::select(matches("^.*Baseline_.*(?<!_visit2)$", perl = TRUE)) 
+
+df___smwt <- df__ %>%
+  dplyr::select(matches("^.*Smwt_.*(?<!_visit2)$", perl = TRUE)) %>%
+  dplyr::select(-smwt_total_distance_visit1, -smwt_termination_visit1)
+
+df___omsts <- df__ %>%
+  dplyr::select(matches("^.*Omsts_.*(?<!_visit2)$", perl = TRUE)) %>%
+  dplyr::select(-omsts_total_rep_visit1)
+
+df___ortho <- df__ %>%
+  dplyr::select(matches("^.*ortho_.*(?<!_visit2)$", perl = TRUE))
+
+df___voice <- df__ %>%
+  dplyr::select(matches("^.*voice_.*(?<!_visit2)$", perl = TRUE))
+
+
+cbind(df__ %>% dplyr::select(bio_id, Group), 
+      df___agebmi, df___baseline,
+      df___omsts, df___ortho,
+      df___smwt, df___voice) -> df___cbind_temp
+
+df___cbind_temp[complete.cases(df___cbind_temp),] -> df___cbind
+
+df___cbind %>% pull(Group) -> groups
+
+df___cbind <- df___cbind %>%
+  mutate(across(.cols = -c(bio_id, Group), .fns = ~as.numeric(.)))
+
+df___agebmi_noNA <- df___cbind %>% dplyr::select(all_of(intersect(names(df___agebmi), names(df___cbind))))
+df___baseline_noNA <- df___cbind %>% dplyr::select(all_of(intersect(names(df___baseline), names(df___cbind))))
+df___smwt_noNA <- df___cbind %>% dplyr::select(all_of(intersect(names(df___smwt), names(df___cbind))))
+df___omsts_noNA <- df___cbind %>% dplyr::select(all_of(intersect(names(df___omsts), names(df___cbind))))
+df___ortho_noNA <- df___cbind %>% dplyr::select(all_of(intersect(names(df___ortho), names(df___cbind))))
+df___voice_noNA <- df___cbind %>% dplyr::select(all_of(intersect(names(df___voice), names(df___cbind))))
+
+
+df___agebmi_matrix <- as.matrix(df___agebmi_noNA)
+colnames(df___agebmi_matrix) <- NULL
+df___baseline_matrix <- as.matrix(df___baseline_noNA)
+colnames(df___baseline_matrix) <- NULL
+df___smwt_matrix <- as.matrix(df___smwt_noNA)
+colnames(df___smwt_matrix) <- NULL
+df___omsts_matrix <- as.matrix(df___omsts_noNA)
+colnames(df___omsts_matrix) <- NULL
+df___ortho_matrix <- as.matrix(df___ortho_noNA)
+colnames(df___ortho_matrix) <- NULL
+df___voice_matrix <- as.matrix(df___voice_noNA)
+colnames(df___voice_matrix) <- NULL
+
+# List of sensor datasets
+sensor_data <- list(DEMOagebmi = t(df___agebmi_matrix),
+                    BaselineSensor = t(df___baseline_matrix),
+                    SmwtSensor = t(df___smwt_matrix), OmstsSensor = t(df___omsts_matrix),
+                    OrthoSensor = t(df___ortho_matrix), VoiceSensor = t(df___voice_matrix))
+group_labels <- list(DEMOagebmi = groups,
+                     BaselineSensor = groups,
+                     SmwtSensor = groups, OmstsSensor = groups,
+                     OrthoSensor = groups, VoiceSensor = groups)
+
+sapply(sensor_data, dim)
+
+length(groups) == nrow(df___agebmi_noNA)
+
+result <- MultiPower(
+  data = sensor_data,
+  groups = group_labels,
+  type = c(2, 2, 2, 2, 2, 2),  
+  omicPower = 0.8,  # minimum power that must be achieved for each omic
+  averagePower = 0.9,  # minimum average power that must be globally achieved
+  fdr = 0.05,  # False discovery rate
+  cost = 1,  # The cost to generate a replicate (a sample) for each omic. By default, cost = 1 (all the omics assumed to have the same cost).
+  equalSize = TRUE,  # Same sample size for all omics
+  max.size = 10000  # Limit sample size to 100
+)
+
+print(result)
+
+
+
+```
